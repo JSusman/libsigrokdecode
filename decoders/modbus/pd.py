@@ -110,6 +110,10 @@ class Modbus_ADU:
         self.puti(last_byte_address, annotation,
                   message.format(self.data[-1].data))
 
+    #putpy outputs python code Jon Susman 4/1/2026
+     def putpy(self, start, end, data):
+        self.parent.put(start, end, self.parent.out_python, data)
+
     def close(self, message_overflow):
         '''Function to be called when next message is started. As there is
         always space between one message and the next, we can use that space
@@ -140,6 +144,15 @@ class Modbus_ADU:
                     'Modbus data frames are limited to 256 bytes')
             except No_more_data:
                 pass
+                
+        """Added a check for frames with only 1 byte
+            Putpy call returns whether the frame has 
+            data or an error, and listing the function code Jon Susman 4/1/2026""" 
+        
+        if len(data) <2:
+            return 
+        put_payload = ['ERROR' if self.hasError else 'DATA', {'function_code': data[1].data, 'hasError': self.hasError}]
+        self.putpy(data[0].start, data[-1].end,put_payload)
 
     def check_crc(self, byte_to_put):
         '''Check the CRC code, data[byte_to_put] is the 2nd byte of the CRC.'''
@@ -867,6 +880,9 @@ class Decoder(srd.Decoder):
 
     def start(self):
         self.out_ann = self.register(srd.OUTPUT_ANN)
+        
+        #Added register to output python Jon Susman 4/1/2026
+        self.out_python = self.register(srd.OUTPUT_PYTHON)
 
     def puta(self, start, end, ann_str, message):
         '''Put an annotation from start to end, with ann as a
